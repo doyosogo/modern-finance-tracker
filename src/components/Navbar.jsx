@@ -1,20 +1,21 @@
 import { NavLink } from 'react-router-dom'
 
 function Navbar() {
-  const base = 'rounded-lg px-3 py-2 text-sm font-medium transition'
+  const base =
+    'rounded-lg px-3 py-2 text-sm font-medium transition-colors'
 
   const active =
-    'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30'
+    'bg-blue-600 text-white'
 
   const inactive =
-    'text-violet-200 hover:bg-violet-900/50 hover:text-white'
+    'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
 
   return (
-    <nav className="border-b border-fuchsia-500/20 bg-[#12091f]/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <NavLink
           to="/"
-          className="text-2xl font-bold text-white"
+          className="text-2xl font-bold text-slate-900"
         >
           FinanceTracker
         </NavLink>

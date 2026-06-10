@@ -16,9 +16,9 @@ function TransactionForm({
   const [recurringFrequency, setRecurringFrequency] = useState('monthly')
 
   const inputStyle =
-    'w-full rounded-lg border border-violet-500/20 bg-violet-950/50 p-2 text-white outline-none placeholder:text-violet-200/40 focus:border-fuchsia-400'
+    'w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
 
-  const labelStyle = 'mb-1 block text-sm text-violet-200/70'
+  const labelStyle = 'mb-1 block text-sm font-medium text-slate-600'
 
   useEffect(() => {
     if (editingTransaction) {
@@ -95,9 +95,9 @@ function TransactionForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-fuchsia-500/20 bg-[#130b24]/80 p-6 shadow-xl shadow-fuchsia-950/20"
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
     >
-      <h2 className="mb-4 text-xl font-bold">
+      <h2 className="mb-4 text-xl font-bold text-slate-950">
         {editingTransaction ? 'Edit Transaction' : 'Add Transaction'}
       </h2>
 
@@ -164,14 +164,14 @@ function TransactionForm({
         <div>
           <label className={labelStyle}>Recurring</label>
 
-          <div className="flex items-center gap-3 rounded-lg border border-violet-500/20 bg-violet-950/50 p-2">
+          <div className="flex items-center gap-3 rounded-lg border border-slate-300 bg-slate-50 p-2">
             <input
               type="checkbox"
               checked={isRecurring}
               onChange={(e) => setIsRecurring(e.target.checked)}
             />
 
-            <span className="text-sm text-violet-100/80">
+            <span className="text-sm text-slate-600">
               Repeat this transaction
             </span>
           </div>
@@ -195,7 +195,7 @@ function TransactionForm({
       </div>
 
       <div className="mt-5 flex gap-3">
-        <button className="rounded-lg bg-fuchsia-500 px-5 py-2 font-semibold text-white shadow-lg shadow-fuchsia-500/30 hover:bg-fuchsia-400">
+        <button className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700">
           {editingTransaction ? 'Save Changes' : 'Save Transaction'}
         </button>
 
@@ -203,7 +203,7 @@ function TransactionForm({
           <button
             type="button"
             onClick={resetForm}
-            className="rounded-lg border border-violet-400/30 bg-violet-950/50 px-5 py-2 font-semibold text-white hover:bg-violet-900/70"
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2 font-semibold text-slate-700 transition hover:bg-slate-100"
           >
             Cancel
           </button>

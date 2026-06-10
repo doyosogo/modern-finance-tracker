@@ -49,14 +49,16 @@ function Transactions() {
   })
 
   const sectionStyle =
-    'mt-6 rounded-2xl border border-fuchsia-500/20 bg-[#130b24]/80 p-6 shadow-xl shadow-fuchsia-950/20'
+    'mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm'
 
   const inputStyle =
-    'rounded-lg border border-violet-500/20 bg-violet-950/50 p-2 text-white outline-none placeholder:text-violet-200/40 focus:border-fuchsia-400'
+    'rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold">Transactions</h1>
+      <h1 className="mb-6 text-3xl font-bold text-slate-950">
+        Transactions
+      </h1>
 
       <TransactionForm
         onTransactionSaved={loadTransactions}
@@ -65,7 +67,7 @@ function Transactions() {
       />
 
       <div className={sectionStyle}>
-        <h2 className="mb-4 text-xl font-bold">Filters</h2>
+        <h2 className="mb-4 text-xl font-bold text-slate-950">Filters</h2>
 
         <div className="grid gap-4 md:grid-cols-3">
           <input
@@ -104,15 +106,17 @@ function Transactions() {
 
       <section className={sectionStyle}>
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-bold">Transaction History</h2>
+          <h2 className="text-xl font-bold text-slate-950">
+            Transaction History
+          </h2>
 
-          <p className="text-sm text-violet-200/70">
+          <p className="text-sm text-slate-500">
             Showing {filteredTransactions.length} of {transactions.length}
           </p>
         </div>
 
         {filteredTransactions.length === 0 ? (
-          <p className="text-violet-200/70">No transactions found.</p>
+          <p className="text-slate-500">No transactions found.</p>
         ) : (
           <div className="grid gap-3">
             {filteredTransactions
@@ -121,22 +125,22 @@ function Transactions() {
               .map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex flex-col justify-between gap-3 rounded-xl border border-violet-500/10 bg-violet-950/40 p-4 md:flex-row md:items-center"
+                  className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center"
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">
+                      <h3 className="font-semibold text-slate-900">
                         {transaction.description}
                       </h3>
 
                       {transaction.isRecurring && (
-                        <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-2 py-1 text-xs font-semibold text-fuchsia-300">
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600">
                           Recurring: {formatFrequency(transaction.recurringFrequency)}
                         </span>
                       )}
                     </div>
 
-                    <p className="text-sm text-violet-200/70">
+                    <p className="text-sm text-slate-500">
                       {transaction.category} • {transaction.date}
                     </p>
                   </div>
@@ -145,8 +149,8 @@ function Transactions() {
                     <p
                       className={`text-lg font-bold ${
                         transaction.type === 'income'
-                          ? 'text-emerald-400'
-                          : 'text-rose-400'
+                          ? 'text-emerald-600'
+                          : 'text-red-500'
                       }`}
                     >
                       {transaction.type === 'income' ? '+' : '-'}$
@@ -155,14 +159,14 @@ function Transactions() {
 
                     <button
                       onClick={() => setEditingTransaction(transaction)}
-                      className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-sm font-medium text-cyan-300 hover:bg-cyan-500/20"
+                      className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
                     >
                       Edit
                     </button>
 
                     <button
                       onClick={() => deleteTransaction(transaction.id)}
-                      className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-1 text-sm font-medium text-rose-300 hover:bg-rose-500/20"
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-sm font-medium text-red-500 transition hover:bg-red-100"
                     >
                       Delete
                     </button>

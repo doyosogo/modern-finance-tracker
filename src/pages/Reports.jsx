@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { getFromStorage } from '../utils/storage'
 import { getFinancialInsights } from '../utils/insightUtils'
 import {
@@ -16,9 +16,22 @@ import {
 function Reports() {
   const fileInputRef = useRef(null)
   const transactions = getFromStorage('transactions')
-  const insights = getFinancialInsights(transactions)
+  const [selectedPeriod, setSelectedPeriod] = useState('all')
 
-  const expenseTransactions = transactions.filter(
+  const availableMonths = [
+    ...new Set(transactions.map((transaction) => transaction.date.slice(0, 7))),
+  ].sort((a, b) => b.localeCompare(a))
+
+  const filteredTransactions =
+    selectedPeriod === 'all'
+      ? transactions
+      : transactions.filter(
+          (transaction) => transaction.date.slice(0, 7) === selectedPeriod
+        )
+
+  const insights = getFinancialInsights(filteredTransactions)
+
+  const expenseTransactions = filteredTransactions.filter(
     (transaction) => transaction.type === 'expense'
   )
 
@@ -37,21 +50,31 @@ function Reports() {
   )
 
   const colors = [
-    '#d946ef',
-    '#a855f7',
-    '#fb7185',
-    '#38bdf8',
-    '#34d399',
-    '#facc15',
-    '#818cf8',
-    '#f472b6',
+    '#3b82f6',
+    '#14b8a6',
+    '#22c55e',
+    '#ef4444',
+    '#f59e0b',
+    '#8b5cf6',
+    '#06b6d4',
+    '#ec4899',
   ]
 
   const sectionStyle =
-    'mb-6 rounded-2xl border border-fuchsia-500/20 bg-[#130b24]/80 p-6 shadow-xl shadow-fuchsia-950/20'
+    'mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm'
 
   const cardStyle =
-    'rounded-xl border border-violet-500/10 bg-violet-950/40 p-4'
+    'rounded-xl border border-slate-200 bg-slate-50 p-4'
+
+  function formatMonth(monthValue) {
+    const [year, month] = monthValue.split('-')
+    const date = new Date(Number(year), Number(month) - 1)
+
+    return date.toLocaleDateString('en-AU', {
+      month: 'long',
+      year: 'numeric',
+    })
+  }
 
   function handleImportClick() {
     fileInputRef.current.click()
@@ -76,26 +99,30 @@ function Reports() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold">Reports</h1>
+      <h1 className="mb-6 text-3xl font-bold text-slate-950">
+        Reports
+      </h1>
 
       <section className={sectionStyle}>
-        <h2 className="mb-2 text-xl font-bold">Backup Data</h2>
+        <h2 className="mb-2 text-xl font-bold text-slate-950">
+          Backup Data
+        </h2>
 
-        <p className="mb-4 text-sm text-violet-200/70">
+        <p className="mb-4 text-sm text-slate-500">
           Export your transactions to a JSON file or import a previous backup.
         </p>
 
         <div className="flex flex-wrap gap-3">
           <button
             onClick={exportFinanceData}
-            className="rounded-lg bg-fuchsia-500 px-4 py-2 font-semibold text-white shadow-lg shadow-fuchsia-500/30 hover:bg-fuchsia-400"
+            className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
             Export Backup
           </button>
 
           <button
             onClick={handleImportClick}
-            className="rounded-lg border border-violet-400/30 bg-violet-950/50 px-4 py-2 font-semibold text-white hover:bg-violet-900/70"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-100"
           >
             Import Backup
           </button>
@@ -111,12 +138,50 @@ function Reports() {
       </section>
 
       <section className={sectionStyle}>
-        <h2 className="mb-4 text-xl font-bold">Financial Insights</h2>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-950">
+              Report Period
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Choose whether to view all-time data or a specific month.
+            </p>
+          </div>
+
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:w-56"
+          >
+            <option value="all">All Time</option>
+
+            {availableMonths.map((month) => (
+              <option key={month} value={month}>
+                {formatMonth(month)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
+
+      <section className={sectionStyle}>
+        <h2 className="mb-4 text-xl font-bold text-slate-950">
+          Financial Insights
+        </h2>
+
+        <p className="mb-4 text-sm text-slate-500">
+          Showing{' '}
+          {selectedPeriod === 'all'
+            ? 'all-time results'
+            : formatMonth(selectedPeriod)}
+          .
+        </p>
 
         <div className="grid gap-4 md:grid-cols-4">
           <div className={cardStyle}>
-            <p className="text-sm text-violet-200/70">Biggest Expense</p>
-            <p className="mt-2 font-bold text-rose-400">
+            <p className="text-sm text-slate-500">Biggest Expense</p>
+            <p className="mt-2 font-bold text-red-500">
               {insights.biggestExpense
                 ? `${insights.biggestExpense.description} ($${insights.biggestExpense.amount.toFixed(
                     2
@@ -126,8 +191,8 @@ function Reports() {
           </div>
 
           <div className={cardStyle}>
-            <p className="text-sm text-violet-200/70">Highest Income</p>
-            <p className="mt-2 font-bold text-emerald-400">
+            <p className="text-sm text-slate-500">Highest Income</p>
+            <p className="mt-2 font-bold text-emerald-600">
               {insights.highestIncome
                 ? `${insights.highestIncome.description} ($${insights.highestIncome.amount.toFixed(
                     2
@@ -137,15 +202,15 @@ function Reports() {
           </div>
 
           <div className={cardStyle}>
-            <p className="text-sm text-violet-200/70">Average Expense</p>
-            <p className="mt-2 font-bold text-fuchsia-300">
+            <p className="text-sm text-slate-500">Average Expense</p>
+            <p className="mt-2 font-bold text-blue-600">
               ${insights.averageExpense.toFixed(2)}
             </p>
           </div>
 
           <div className={cardStyle}>
-            <p className="text-sm text-violet-200/70">Most Used Category</p>
-            <p className="mt-2 font-bold text-cyan-300">
+            <p className="text-sm text-slate-500">Most Used Category</p>
+            <p className="mt-2 font-bold text-teal-600">
               {insights.mostUsedCategory}
             </p>
           </div>
@@ -153,10 +218,14 @@ function Reports() {
       </section>
 
       <section className={sectionStyle}>
-        <h2 className="mb-4 text-xl font-bold">Spending by Category</h2>
+        <h2 className="mb-4 text-xl font-bold text-slate-950">
+          Spending by Category
+        </h2>
 
         {chartData.length === 0 ? (
-          <p className="text-violet-200/70">No expense data yet.</p>
+          <p className="text-slate-500">
+            No expense data found for this period.
+          </p>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             <div className="h-80">
@@ -186,7 +255,7 @@ function Reports() {
               {chartData.map((item, index) => (
                 <div
                   key={item.name}
-                  className="flex items-center justify-between rounded-xl border border-violet-500/10 bg-violet-950/40 p-4"
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4"
                 >
                   <div className="flex items-center gap-3">
                     <span
@@ -196,10 +265,12 @@ function Reports() {
                       }}
                     />
 
-                    <span>{item.name}</span>
+                    <span className="text-slate-700">{item.name}</span>
                   </div>
 
-                  <span className="font-bold">${item.value.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">
+                    ${item.value.toFixed(2)}
+                  </span>
                 </div>
               ))}
             </div>

@@ -59,13 +59,17 @@ function Goals() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold">Savings Goals</h1>
+      <h1 className="mb-6 text-3xl font-bold text-slate-950">
+        Savings Goals
+      </h1>
 
       <form
         onSubmit={addGoal}
-        className="rounded-2xl border border-fuchsia-500/20 bg-[#130b24]/80 p-6 shadow-xl shadow-fuchsia-950/20"
+        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
-        <h2 className="mb-4 text-xl font-bold">Create Goal</h2>
+        <h2 className="mb-4 text-xl font-bold text-slate-950">
+          Create Goal
+        </h2>
 
         <div className="grid gap-4 md:grid-cols-3">
           <input
@@ -73,7 +77,7 @@ function Goals() {
             placeholder="Goal name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-lg border border-violet-500/20 bg-violet-950/50 p-2 text-white outline-none placeholder:text-violet-200/40 focus:border-fuchsia-400"
+            className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
 
           <input
@@ -81,7 +85,7 @@ function Goals() {
             placeholder="Target amount"
             value={targetAmount}
             onChange={(e) => setTargetAmount(e.target.value)}
-            className="rounded-lg border border-violet-500/20 bg-violet-950/50 p-2 text-white outline-none placeholder:text-violet-200/40 focus:border-fuchsia-400"
+            className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
 
           <input
@@ -89,22 +93,22 @@ function Goals() {
             placeholder="Current saved amount"
             value={currentAmount}
             onChange={(e) => setCurrentAmount(e.target.value)}
-            className="rounded-lg border border-violet-500/20 bg-violet-950/50 p-2 text-white outline-none placeholder:text-violet-200/40 focus:border-fuchsia-400"
+            className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </div>
 
-        <button className="mt-5 rounded-lg bg-fuchsia-500 px-5 py-2 font-semibold text-white shadow-lg shadow-fuchsia-500/30 hover:bg-fuchsia-400">
+        <button className="mt-5 rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700">
           Save Goal
         </button>
       </form>
 
-      <section className="mt-6 rounded-2xl border border-fuchsia-500/20 bg-[#130b24]/80 p-6 shadow-xl shadow-fuchsia-950/20">
-        <h2 className="mb-4 text-xl font-bold">Goal Progress</h2>
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-xl font-bold text-slate-950">
+          Goal Progress
+        </h2>
 
         {goals.length === 0 ? (
-          <p className="text-violet-200/70">
-            No savings goals created yet.
-          </p>
+          <p className="text-slate-500">No savings goals created yet.</p>
         ) : (
           <div className="grid gap-4">
             {goals.map((goal) => {
@@ -121,18 +125,20 @@ function Goals() {
               return (
                 <div
                   key={goal.id}
-                  className="rounded-xl border border-violet-500/10 bg-violet-950/40 p-4"
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h3 className="font-semibold">{goal.name}</h3>
+                      <h3 className="font-semibold text-slate-900">
+                        {goal.name}
+                      </h3>
 
-                      <p className="text-sm text-violet-200/70">
+                      <p className="text-sm text-slate-500">
                         ${goal.currentAmount.toFixed(2)} / $
                         {goal.targetAmount.toFixed(2)}
                       </p>
 
-                      <p className="mt-1 text-sm text-fuchsia-300">
+                      <p className="mt-1 text-sm text-blue-600">
                         Remaining: ${remaining.toFixed(2)}
                       </p>
                     </div>
@@ -144,26 +150,26 @@ function Goals() {
                         onChange={(e) =>
                           updateGoalAmount(goal.id, e.target.value)
                         }
-                        className="rounded-lg border border-violet-500/20 bg-violet-950/50 p-2 text-white outline-none focus:border-fuchsia-400"
+                        className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                       />
 
                       <button
                         onClick={() => deleteGoal(goal.id)}
-                        className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-1 text-sm font-medium text-rose-300 hover:bg-rose-500/20"
+                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-sm font-medium text-red-500 transition hover:bg-red-100"
                       >
                         Delete
                       </button>
                     </div>
                   </div>
 
-                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-violet-950">
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full bg-fuchsia-500"
+                      className="h-full bg-blue-600"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
 
-                  <p className="mt-2 text-sm text-violet-200/70">
+                  <p className="mt-2 text-sm text-slate-500">
                     {Math.round(progress)}% complete
                   </p>
                 </div>

@@ -9,23 +9,10 @@ import Goals from './pages/Goals'
 
 function App() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden text-white">
-      <div
-        className="fixed inset-0 -z-30 bg-cover bg-center opacity-45"
-        style={{
-          backgroundImage: "url('/background.jpg')",
-          filter: 'blur(6px)',
-          transform: 'scale(1.04)',
-        }}
-      />
-
-      <div className="fixed inset-0 -z-20 bg-[#05030d]/65" />
-
-      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-fuchsia-950/20 via-transparent to-[#05030d]" />
-
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <Navbar />
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="mx-auto max-w-7xl px-6 py-8">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
