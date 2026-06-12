@@ -1,22 +1,55 @@
 import { useEffect, useState } from 'react'
-import { getFromStorage, saveToStorage } from '../utils/storage'
+import {
+  createGoal,
+  deleteGoal as deleteGoalRequest,
+  getGoals,
+  updateGoal,
+} from '../api/goals.js'
 
 function Goals() {
   const [goals, setGoals] = useState([])
   const [name, setName] = useState('')
   const [targetAmount, setTargetAmount] = useState('')
   const [currentAmount, setCurrentAmount] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    setGoals(getFromStorage('goals'))
-  }, [])
-
-  function saveGoals(updatedGoals) {
-    setGoals(updatedGoals)
-    saveToStorage('goals', updatedGoals)
+  async function loadGoals() {
+    const data = await getGoals()
+    setGoals(data)
   }
 
-  function addGoal(e) {
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadPageData() {
+      try {
+        const data = await getGoals()
+
+        if (isMounted) {
+          setGoals(data)
+          setError('')
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || 'Unable to load goals.')
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadPageData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  async function addGoal(e) {
     e.preventDefault()
 
     if (!name || !targetAmount || Number(targetAmount) <= 0) {
@@ -24,37 +57,54 @@ function Goals() {
       return
     }
 
-    const newGoal = {
-      id: Date.now(),
+    const payload = {
       name,
-      targetAmount: Number(targetAmount),
-      currentAmount: Number(currentAmount) || 0,
-      createdAt: new Date().toISOString(),
+      target_amount: Number(targetAmount),
+      current_amount: Number(currentAmount) || 0,
     }
 
-    saveGoals([...goals, newGoal])
-
-    setName('')
-    setTargetAmount('')
-    setCurrentAmount('')
+    try {
+      setIsSaving(true)
+      setError('')
+      await createGoal(payload)
+      await loadGoals()
+      setName('')
+      setTargetAmount('')
+      setCurrentAmount('')
+    } catch (err) {
+      setError(err.message || 'Unable to save goal.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  function deleteGoal(id) {
-    const updatedGoals = goals.filter((goal) => goal.id !== id)
-    saveGoals(updatedGoals)
+  async function deleteGoal(id) {
+    try {
+      setError('')
+      await deleteGoalRequest(id)
+      setGoals((currentGoals) =>
+        currentGoals.filter((goal) => goal.id !== id)
+      )
+    } catch (err) {
+      setError(err.message || 'Unable to delete goal.')
+    }
   }
 
-  function updateGoalAmount(id, value) {
-    const updatedGoals = goals.map((goal) =>
-      goal.id === id
-        ? {
-            ...goal,
-            currentAmount: Number(value),
-          }
-        : goal
-    )
+  async function updateGoalAmount(id, value) {
+    try {
+      setError('')
+      const updatedGoal = await updateGoal(id, {
+        current_amount: Number(value),
+      })
 
-    saveGoals(updatedGoals)
+      setGoals((currentGoals) =>
+        currentGoals.map((goal) =>
+          goal.id === id ? updatedGoal : goal
+        )
+      )
+    } catch (err) {
+      setError(err.message || 'Unable to update goal.')
+    }
   }
 
   return (
@@ -62,6 +112,12 @@ function Goals() {
       <h1 className="mb-6 text-3xl font-bold text-slate-950">
         Savings Goals
       </h1>
+
+      {error && (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-600">
+          {error}
+        </div>
+      )}
 
       <form
         onSubmit={addGoal}
@@ -97,8 +153,11 @@ function Goals() {
           />
         </div>
 
-        <button className="mt-5 rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700">
-          Save Goal
+        <button
+          disabled={isSaving}
+          className="mt-5 rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          {isSaving ? 'Saving...' : 'Save Goal'}
         </button>
       </form>
 
@@ -107,20 +166,17 @@ function Goals() {
           Goal Progress
         </h2>
 
-        {goals.length === 0 ? (
+        {isLoading ? (
+          <p className="text-slate-500">Loading goals...</p>
+        ) : goals.length === 0 ? (
           <p className="text-slate-500">No savings goals created yet.</p>
         ) : (
           <div className="grid gap-4">
             {goals.map((goal) => {
-              const progress = Math.min(
-                (goal.currentAmount / goal.targetAmount) * 100,
-                100
-              )
-
-              const remaining = Math.max(
-                goal.targetAmount - goal.currentAmount,
-                0
-              )
+              const current = Number(goal.current_amount)
+              const target = Number(goal.target_amount)
+              const progress = Math.min((current / target) * 100, 100)
+              const remaining = Math.max(target - current, 0)
 
               return (
                 <div
@@ -134,8 +190,7 @@ function Goals() {
                       </h3>
 
                       <p className="text-sm text-slate-500">
-                        ${goal.currentAmount.toFixed(2)} / $
-                        {goal.targetAmount.toFixed(2)}
+                        ${current.toFixed(2)} / ${target.toFixed(2)}
                       </p>
 
                       <p className="mt-1 text-sm text-blue-600">
@@ -146,7 +201,7 @@ function Goals() {
                     <div className="flex flex-col gap-2 md:w-48">
                       <input
                         type="number"
-                        value={goal.currentAmount}
+                        value={goal.current_amount}
                         onChange={(e) =>
                           updateGoalAmount(goal.id, e.target.value)
                         }
