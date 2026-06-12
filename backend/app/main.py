@@ -29,3 +29,8 @@ app.include_router(goals_router)
 app.include_router(budgets_router)
 app.include_router(dashboard_router)
 app.include_router(reports_router)
+
+
+@app.get("/health", tags=["health"])
+def health_check() -> dict[str, str]:
+    return {"status": "ok"}
