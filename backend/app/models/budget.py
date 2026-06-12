@@ -1,10 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.category import Category
 
 
 class Budget(Base):
@@ -14,7 +18,7 @@ class Budget(Base):
         UniqueConstraint("category_id", name="uq_budgets_category_id"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=False,
@@ -33,4 +37,4 @@ class Budget(Base):
         nullable=False,
     )
 
-    category = relationship("Category", back_populates="budgets")
+    category: Mapped["Category"] = relationship(back_populates="budgets")
