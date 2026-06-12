@@ -224,17 +224,6 @@ docker run --rm \
   python scripts/seed_categories.py
 ```
 
-## CI
-
-GitHub Actions runs on pushes to `main` and on pull requests. The workflow:
-
-- installs frontend dependencies with `npm ci`
-- builds the Vite frontend
-- runs frontend linting
-- installs backend dependencies
-- validates FastAPI imports and route registration
-- runs Python compile checks for backend code, scripts, and Alembic files
-
 ## Deployment Notes
 
 - Deploy the frontend as a static Vite build from `dist`.
@@ -265,7 +254,6 @@ Planned future improvements include:
 
 - User authentication
 - Automated tests
-- CI/CD deployment pipeline
 
 ## Author
 
