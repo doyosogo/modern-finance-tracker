@@ -1,4 +1,5 @@
 const DEFAULT_API_BASE_URL = 'http://localhost:8000/api'
+const AUTH_TOKEN_STORAGE_KEY = 'finance_tracker_access_token'
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
@@ -42,10 +43,27 @@ async function getErrorMessage(response) {
   return text || `Request failed with status ${response.status}`
 }
 
+function getStoredAccessToken() {
+  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+}
+
+function handleUnauthorizedResponse() {
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+
+  if (window.location.pathname !== '/login') {
+    window.location.assign('/login')
+  }
+}
+
 export async function apiRequest(path, options = {}) {
   const { params, body, headers, ...fetchOptions } = options
+  const accessToken = getStoredAccessToken()
   const requestHeaders = {
     ...headers,
+  }
+
+  if (accessToken) {
+    requestHeaders.Authorization = `Bearer ${accessToken}`
   }
 
   if (body !== undefined) {
@@ -59,6 +77,10 @@ export async function apiRequest(path, options = {}) {
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorizedResponse()
+    }
+
     const message = await getErrorMessage(response)
     throw new Error(message)
   }

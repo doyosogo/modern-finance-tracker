@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../context/useAuth.js'
 
 function Navbar() {
+  const { isAuthenticated, logout } = useAuth()
+
   const base =
     'rounded-lg px-3 py-2 text-sm font-medium transition-colors'
 
@@ -74,6 +77,36 @@ function Navbar() {
           >
             Goals
           </NavLink>
+
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={logout}
+              className={`${base} ${inactive}`}
+            >
+              Logout
+            </button>
+          ) : (
+            <>
+              <NavLink
+                to="/login"
+                className={({ isActive }) =>
+                  `${base} ${isActive ? active : inactive}`
+                }
+              >
+                Login
+              </NavLink>
+
+              <NavLink
+                to="/register"
+                className={({ isActive }) =>
+                  `${base} ${isActive ? active : inactive}`
+                }
+              >
+                Register
+              </NavLink>
+            </>
+          )}
         </div>
       </div>
     </nav>
