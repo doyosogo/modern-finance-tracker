@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     app_name: str = "Finance Tracker API"
     debug: bool = False
     database_url: str = Field(min_length=1, validation_alias="DATABASE_URL")
+    secret_key: str = Field(min_length=32, validation_alias="SECRET_KEY")
+    algorithm: str = Field(validation_alias="ALGORITHM")
+    access_token_expire_minutes: int = Field(
+        gt=0,
+        validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES",
+    )
     cors_origins_raw: str = Field(
         default="http://localhost:5173",
         validation_alias="CORS_ORIGINS",
@@ -50,6 +56,26 @@ class Settings(BaseSettings):
             raise ValueError("CORS_ORIGINS must include at least one origin.")
 
         return value
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, value: str) -> str:
+        normalized_value = value.strip()
+
+        if not normalized_value:
+            raise ValueError("SECRET_KEY cannot be blank.")
+
+        return normalized_value
+
+    @field_validator("algorithm")
+    @classmethod
+    def validate_algorithm(cls, value: str) -> str:
+        normalized_value = value.strip()
+
+        if normalized_value != "HS256":
+            raise ValueError("ALGORITHM must be HS256.")
+
+        return normalized_value
 
     @computed_field
     @property

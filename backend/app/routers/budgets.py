@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
+from app.dependencies.auth import CurrentUser
 from app.models.budget import Budget
 from app.models.category import Category
 from app.schemas.budget import BudgetCreate, BudgetRead, BudgetUpdate
@@ -15,11 +16,11 @@ router = APIRouter(prefix="/api/budgets", tags=["budgets"])
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-def get_budget_or_404(db: Session, budget_id: int) -> Budget:
+def get_budget_or_404(db: Session, budget_id: int, user_id: int) -> Budget:
     statement = (
         select(Budget)
         .options(selectinload(Budget.category))
-        .where(Budget.id == budget_id)
+        .where(Budget.id == budget_id, Budget.user_id == user_id)
     )
     budget = db.scalar(statement)
 
@@ -32,8 +33,10 @@ def get_budget_or_404(db: Session, budget_id: int) -> Budget:
     return budget
 
 
-def get_category_or_404(db: Session, category_id: int) -> Category:
-    category = db.get(Category, category_id)
+def get_category_or_404(db: Session, category_id: int, user_id: int) -> Category:
+    category = db.scalar(
+        select(Category).where(Category.id == category_id, Category.user_id == user_id)
+    )
 
     if category is None:
         raise HTTPException(
@@ -47,9 +50,13 @@ def get_category_or_404(db: Session, category_id: int) -> Category:
 def raise_if_duplicate_category_budget(
     db: Session,
     category_id: int,
+    user_id: int,
     budget_id: int | None = None,
 ) -> None:
-    statement = select(Budget).where(Budget.category_id == category_id)
+    statement = select(Budget).where(
+        Budget.category_id == category_id,
+        Budget.user_id == user_id,
+    )
 
     if budget_id is not None:
         statement = statement.where(Budget.id != budget_id)
@@ -63,32 +70,45 @@ def raise_if_duplicate_category_budget(
         )
 
 
-def get_budget_for_response(db: Session, budget_id: int) -> Budget:
-    return get_budget_or_404(db, budget_id)
+def get_budget_for_response(db: Session, budget_id: int, user_id: int) -> Budget:
+    return get_budget_or_404(db, budget_id, user_id)
 
 
 @router.get("", response_model=list[BudgetRead], status_code=status.HTTP_200_OK)
-def list_budgets(db: DbSession) -> list[Budget]:
+def list_budgets(db: DbSession, current_user: CurrentUser) -> list[Budget]:
     statement = (
         select(Budget)
         .options(selectinload(Budget.category))
         .join(Budget.category)
+        .where(Budget.user_id == current_user.id)
         .order_by(Category.name, Budget.id)
     )
     return list(db.scalars(statement).all())
 
 
 @router.get("/{budget_id}", response_model=BudgetRead, status_code=status.HTTP_200_OK)
-def get_budget(budget_id: int, db: DbSession) -> Budget:
-    return get_budget_or_404(db, budget_id)
+def get_budget(
+    budget_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Budget:
+    return get_budget_or_404(db, budget_id, current_user.id)
 
 
 @router.post("", response_model=BudgetRead, status_code=status.HTTP_201_CREATED)
-def create_budget(budget_in: BudgetCreate, db: DbSession) -> Budget:
-    get_category_or_404(db, budget_in.category_id)
-    raise_if_duplicate_category_budget(db, budget_in.category_id)
+def create_budget(
+    budget_in: BudgetCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Budget:
+    get_category_or_404(db, budget_in.category_id, current_user.id)
+    raise_if_duplicate_category_budget(db, budget_in.category_id, current_user.id)
 
-    budget = Budget(category_id=budget_in.category_id, amount=budget_in.amount)
+    budget = Budget(
+        user_id=current_user.id,
+        category_id=budget_in.category_id,
+        amount=budget_in.amount,
+    )
     db.add(budget)
 
     try:
@@ -100,7 +120,7 @@ def create_budget(budget_in: BudgetCreate, db: DbSession) -> Budget:
             detail="A budget already exists for this category.",
         ) from exc
 
-    return get_budget_for_response(db, budget.id)
+    return get_budget_for_response(db, budget.id, current_user.id)
 
 
 @router.patch("/{budget_id}", response_model=BudgetRead, status_code=status.HTTP_200_OK)
@@ -108,15 +128,17 @@ def update_budget(
     budget_id: int,
     budget_in: BudgetUpdate,
     db: DbSession,
+    current_user: CurrentUser,
 ) -> Budget:
-    budget = get_budget_or_404(db, budget_id)
+    budget = get_budget_or_404(db, budget_id, current_user.id)
     update_data = budget_in.model_dump(exclude_unset=True)
 
     if "category_id" in update_data:
-        get_category_or_404(db, update_data["category_id"])
+        get_category_or_404(db, update_data["category_id"], current_user.id)
         raise_if_duplicate_category_budget(
             db,
             update_data["category_id"],
+            current_user.id,
             budget_id=budget.id,
         )
 
@@ -132,12 +154,16 @@ def update_budget(
             detail="A budget already exists for this category.",
         ) from exc
 
-    return get_budget_for_response(db, budget.id)
+    return get_budget_for_response(db, budget.id, current_user.id)
 
 
 @router.delete("/{budget_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_budget(budget_id: int, db: DbSession) -> Response:
-    budget = get_budget_or_404(db, budget_id)
+def delete_budget(
+    budget_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Response:
+    budget = get_budget_or_404(db, budget_id, current_user.id)
     db.delete(budget)
     db.commit()
 

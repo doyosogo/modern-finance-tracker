@@ -1,30 +1,25 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.budget import Budget
+    from app.models.category import Category
+    from app.models.goal import Goal
     from app.models.transaction import Transaction
-    from app.models.user import User
 
 
-class Category(Base):
-    __tablename__ = "categories"
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
-    )
-    name: Mapped[str] = mapped_column(String(80), nullable=False)
-    __table_args__ = (
-        Index("ix_categories_user_id_lower_name", "user_id", func.lower(name), unique=True),
-    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(120), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -38,12 +33,18 @@ class Category(Base):
     )
 
     transactions: Mapped[list["Transaction"]] = relationship(
-        back_populates="category",
+        back_populates="user",
         passive_deletes=True,
     )
     budgets: Mapped[list["Budget"]] = relationship(
-        back_populates="category",
-        cascade="all, delete-orphan",
+        back_populates="user",
         passive_deletes=True,
     )
-    user: Mapped["User | None"] = relationship(back_populates="categories")
+    goals: Mapped[list["Goal"]] = relationship(
+        back_populates="user",
+        passive_deletes=True,
+    )
+    categories: Mapped[list["Category"]] = relationship(
+        back_populates="user",
+        passive_deletes=True,
+    )

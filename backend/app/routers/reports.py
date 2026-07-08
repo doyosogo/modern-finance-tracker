@@ -6,6 +6,7 @@ from sqlalchemy import and_, case, extract, func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.dependencies.auth import CurrentUser
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.transaction import Transaction
@@ -34,14 +35,21 @@ def format_month(year: int, month: int) -> str:
     return f"{year:04d}-{month:02d}"
 
 
-def get_spending_by_category_rows(db: Session) -> list[SpendingByCategoryRead]:
+def get_spending_by_category_rows(
+    db: Session,
+    user_id: int,
+) -> list[SpendingByCategoryRead]:
     total_amount = func.coalesce(func.sum(Transaction.amount), ZERO_MONEY).label(
         "amount"
     )
     statement = (
         select(Category.id, Category.name, total_amount)
         .join(Transaction, Transaction.category_id == Category.id)
-        .where(Transaction.type == "expense")
+        .where(
+            Transaction.type == "expense",
+            Transaction.user_id == user_id,
+            Category.user_id == user_id,
+        )
         .group_by(Category.id, Category.name)
         .order_by(total_amount.desc(), Category.name)
     )
@@ -56,7 +64,7 @@ def get_spending_by_category_rows(db: Session) -> list[SpendingByCategoryRead]:
     ]
 
 
-def get_monthly_summary_rows(db: Session) -> list[MonthlySummaryRead]:
+def get_monthly_summary_rows(db: Session, user_id: int) -> list[MonthlySummaryRead]:
     year_part = extract("year", Transaction.date)
     month_part = extract("month", Transaction.date)
     income_total = func.coalesce(
@@ -79,6 +87,7 @@ def get_monthly_summary_rows(db: Session) -> list[MonthlySummaryRead]:
     )
     statement = (
         select(year_part, month_part, income_total, expense_total)
+        .where(Transaction.user_id == user_id)
         .group_by(year_part, month_part)
         .order_by(year_part, month_part)
     )
@@ -105,8 +114,11 @@ def get_monthly_summary_rows(db: Session) -> list[MonthlySummaryRead]:
     response_model=list[SpendingByCategoryRead],
     status_code=status.HTTP_200_OK,
 )
-def get_spending_by_category(db: DbSession) -> list[SpendingByCategoryRead]:
-    return get_spending_by_category_rows(db)
+def get_spending_by_category(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> list[SpendingByCategoryRead]:
+    return get_spending_by_category_rows(db, current_user.id)
 
 
 @router.get(
@@ -114,8 +126,11 @@ def get_spending_by_category(db: DbSession) -> list[SpendingByCategoryRead]:
     response_model=list[MonthlySummaryRead],
     status_code=status.HTTP_200_OK,
 )
-def get_monthly_summary(db: DbSession) -> list[MonthlySummaryRead]:
-    return get_monthly_summary_rows(db)
+def get_monthly_summary(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> list[MonthlySummaryRead]:
+    return get_monthly_summary_rows(db, current_user.id)
 
 
 @router.get(
@@ -123,7 +138,10 @@ def get_monthly_summary(db: DbSession) -> list[MonthlySummaryRead]:
     response_model=list[BudgetProgressRead],
     status_code=status.HTTP_200_OK,
 )
-def get_budget_progress(db: DbSession) -> list[BudgetProgressRead]:
+def get_budget_progress(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> list[BudgetProgressRead]:
     spent_total = func.coalesce(func.sum(Transaction.amount), ZERO_MONEY).label(
         "spent_amount"
     )
@@ -135,8 +153,10 @@ def get_budget_progress(db: DbSession) -> list[BudgetProgressRead]:
             and_(
                 Transaction.category_id == Budget.category_id,
                 Transaction.type == "expense",
+                Transaction.user_id == current_user.id,
             ),
         )
+        .where(Budget.user_id == current_user.id, Category.user_id == current_user.id)
         .group_by(Budget.id, Category.name, Budget.amount)
         .order_by(Category.name, Budget.id)
     )
@@ -170,21 +190,28 @@ def get_budget_progress(db: DbSession) -> list[BudgetProgressRead]:
     response_model=FinancialInsightsRead,
     status_code=status.HTTP_200_OK,
 )
-def get_financial_insights(db: DbSession) -> FinancialInsightsRead:
+def get_financial_insights(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> FinancialInsightsRead:
     expense_amount = func.coalesce(func.sum(Transaction.amount), ZERO_MONEY).label(
         "amount"
     )
     highest_expense_statement = (
         select(Category.name, expense_amount)
         .join(Transaction, Transaction.category_id == Category.id)
-        .where(Transaction.type == "expense")
+        .where(
+            Transaction.type == "expense",
+            Transaction.user_id == current_user.id,
+            Category.user_id == current_user.id,
+        )
         .group_by(Category.id, Category.name)
         .order_by(expense_amount.desc(), Category.name)
         .limit(1)
     )
     highest_expense = db.execute(highest_expense_statement).one_or_none()
 
-    monthly_summary = get_monthly_summary_rows(db)
+    monthly_summary = get_monthly_summary_rows(db, current_user.id)
 
     month_count = len(monthly_summary)
 

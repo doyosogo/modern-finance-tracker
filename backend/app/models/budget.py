@@ -9,16 +9,22 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.category import Category
+    from app.models.user import User
 
 
 class Budget(Base):
     __tablename__ = "budgets"
     __table_args__ = (
         CheckConstraint("amount >= 0", name="budget_amount_non_negative"),
-        UniqueConstraint("category_id", name="uq_budgets_category_id"),
+        UniqueConstraint("user_id", "category_id", name="uq_budgets_user_id_category_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=False,
@@ -38,3 +44,4 @@ class Budget(Base):
     )
 
     category: Mapped["Category"] = relationship(back_populates="budgets")
+    user: Mapped["User | None"] = relationship(back_populates="budgets")

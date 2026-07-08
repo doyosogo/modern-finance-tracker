@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.dependencies.auth import CurrentUser
 from app.models.budget import Budget
 from app.models.category import Category
 from app.models.transaction import Transaction
@@ -16,8 +17,10 @@ router = APIRouter(prefix="/api/categories", tags=["categories"])
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-def get_category_or_404(db: Session, category_id: int) -> Category:
-    category = db.get(Category, category_id)
+def get_category_or_404(db: Session, category_id: int, user_id: int) -> Category:
+    category = db.scalar(
+        select(Category).where(Category.id == category_id, Category.user_id == user_id)
+    )
 
     if category is None:
         raise HTTPException(
@@ -31,10 +34,14 @@ def get_category_or_404(db: Session, category_id: int) -> Category:
 def raise_if_duplicate_name(
     db: Session,
     name: str,
+    user_id: int,
     category_id: int | None = None,
 ) -> None:
     normalized_name = name.lower()
-    statement = select(Category).where(func.lower(Category.name) == normalized_name)
+    statement = select(Category).where(
+        Category.user_id == user_id,
+        func.lower(Category.name) == normalized_name,
+    )
 
     if category_id is not None:
         statement = statement.where(Category.id != category_id)
@@ -49,16 +56,24 @@ def raise_if_duplicate_name(
 
 
 @router.get("", response_model=list[CategoryRead], status_code=status.HTTP_200_OK)
-def list_categories(db: DbSession) -> list[Category]:
-    statement = select(Category).order_by(func.lower(Category.name), Category.id)
+def list_categories(db: DbSession, current_user: CurrentUser) -> list[Category]:
+    statement = (
+        select(Category)
+        .where(Category.user_id == current_user.id)
+        .order_by(func.lower(Category.name), Category.id)
+    )
     return list(db.scalars(statement).all())
 
 
 @router.post("", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
-def create_category(category_in: CategoryCreate, db: DbSession) -> Category:
-    raise_if_duplicate_name(db, category_in.name)
+def create_category(
+    category_in: CategoryCreate,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Category:
+    raise_if_duplicate_name(db, category_in.name, current_user.id)
 
-    category = Category(name=category_in.name)
+    category = Category(name=category_in.name, user_id=current_user.id)
     db.add(category)
 
     try:
@@ -83,12 +98,18 @@ def update_category(
     category_id: int,
     category_in: CategoryUpdate,
     db: DbSession,
+    current_user: CurrentUser,
 ) -> Category:
-    category = get_category_or_404(db, category_id)
+    category = get_category_or_404(db, category_id, current_user.id)
     update_data = category_in.model_dump(exclude_unset=True)
 
     if "name" in update_data and update_data["name"] != category.name:
-        raise_if_duplicate_name(db, update_data["name"], category_id=category.id)
+        raise_if_duplicate_name(
+            db,
+            update_data["name"],
+            current_user.id,
+            category_id=category.id,
+        )
         category.name = update_data["name"]
 
     try:
@@ -105,11 +126,20 @@ def update_category(
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_category(category_id: int, db: DbSession) -> Response:
-    category = get_category_or_404(db, category_id)
+def delete_category(
+    category_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Response:
+    category = get_category_or_404(db, category_id, current_user.id)
 
     referenced_transaction_id = db.scalar(
-        select(Transaction.id).where(Transaction.category_id == category.id).limit(1)
+        select(Transaction.id)
+        .where(
+            Transaction.category_id == category.id,
+            Transaction.user_id == current_user.id,
+        )
+        .limit(1)
     )
 
     if referenced_transaction_id is not None:
@@ -119,7 +149,9 @@ def delete_category(category_id: int, db: DbSession) -> Response:
         )
 
     referenced_budget_id = db.scalar(
-        select(Budget.id).where(Budget.category_id == category.id).limit(1)
+        select(Budget.id)
+        .where(Budget.category_id == category.id, Budget.user_id == current_user.id)
+        .limit(1)
     )
 
     if referenced_budget_id is not None:

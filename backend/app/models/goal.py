@@ -1,10 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, Numeric, String, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, func, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class Goal(Base):
@@ -16,6 +20,11 @@ class Goal(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     target_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     current_amount: Mapped[Decimal] = mapped_column(
@@ -35,3 +44,5 @@ class Goal(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    user: Mapped["User | None"] = relationship(back_populates="goals")

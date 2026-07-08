@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.routers.auth import router as auth_router
 from app.routers.budgets import router as budgets_router
 from app.routers.categories import router as categories_router
 from app.routers.dashboard import router as dashboard_router
@@ -29,6 +30,7 @@ app.include_router(goals_router)
 app.include_router(budgets_router)
 app.include_router(dashboard_router)
 app.include_router(reports_router)
+app.include_router(auth_router)
 
 
 @app.get("/health", tags=["health"])

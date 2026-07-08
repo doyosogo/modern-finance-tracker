@@ -10,6 +10,7 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.category import Category
+    from app.models.user import User
 
 
 class Transaction(Base):
@@ -29,6 +30,11 @@ class Transaction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     type: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
@@ -58,3 +64,4 @@ class Transaction(Base):
     )
 
     category: Mapped["Category"] = relationship(back_populates="transactions")
+    user: Mapped["User | None"] = relationship(back_populates="transactions")

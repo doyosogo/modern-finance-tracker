@@ -13,6 +13,7 @@ from app.schemas.transaction import (
     TransactionRead,
     TransactionUpdate,
 )
+from app.schemas.user import TokenRead, UserCreate, UserLogin, UserRead, UserUpdate
 
 __all__ = [
     "BudgetCreate",
@@ -32,4 +33,9 @@ __all__ = [
     "TransactionCreate",
     "TransactionRead",
     "TransactionUpdate",
+    "TokenRead",
+    "UserCreate",
+    "UserLogin",
+    "UserRead",
+    "UserUpdate",
 ]

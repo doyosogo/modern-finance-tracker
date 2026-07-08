@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
+from app.dependencies.auth import CurrentUser
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.schemas.common import RecurringFrequency, TransactionType
@@ -26,11 +27,15 @@ MonthFilter = Annotated[
 ]
 
 
-def get_transaction_or_404(db: Session, transaction_id: int) -> Transaction:
+def get_transaction_or_404(
+    db: Session,
+    transaction_id: int,
+    user_id: int,
+) -> Transaction:
     statement = (
         select(Transaction)
         .options(selectinload(Transaction.category))
-        .where(Transaction.id == transaction_id)
+        .where(Transaction.id == transaction_id, Transaction.user_id == user_id)
     )
     transaction = db.scalar(statement)
 
@@ -43,8 +48,10 @@ def get_transaction_or_404(db: Session, transaction_id: int) -> Transaction:
     return transaction
 
 
-def get_category_or_404(db: Session, category_id: int) -> Category:
-    category = db.get(Category, category_id)
+def get_category_or_404(db: Session, category_id: int, user_id: int) -> Category:
+    category = db.scalar(
+        select(Category).where(Category.id == category_id, Category.user_id == user_id)
+    )
 
     if category is None:
         raise HTTPException(
@@ -55,8 +62,12 @@ def get_category_or_404(db: Session, category_id: int) -> Category:
     return category
 
 
-def get_transaction_for_response(db: Session, transaction_id: int) -> Transaction:
-    return get_transaction_or_404(db, transaction_id)
+def get_transaction_for_response(
+    db: Session,
+    transaction_id: int,
+    user_id: int,
+) -> Transaction:
+    return get_transaction_or_404(db, transaction_id, user_id)
 
 
 def parse_month_range(month: str) -> tuple[Date, Date]:
@@ -127,12 +138,17 @@ def apply_transaction_filters(
 @router.get("", response_model=list[TransactionRead], status_code=status.HTTP_200_OK)
 def list_transactions(
     db: DbSession,
+    current_user: CurrentUser,
     search: str | None = None,
     transaction_type: TransactionTypeFilter = None,
     category_id: int | None = Query(default=None, gt=0),
     month: MonthFilter = None,
 ) -> list[Transaction]:
-    statement = select(Transaction).options(selectinload(Transaction.category))
+    statement = (
+        select(Transaction)
+        .options(selectinload(Transaction.category))
+        .where(Transaction.user_id == current_user.id)
+    )
     statement = apply_transaction_filters(
         statement,
         search,
@@ -150,18 +166,24 @@ def list_transactions(
     response_model=TransactionRead,
     status_code=status.HTTP_200_OK,
 )
-def get_transaction(transaction_id: int, db: DbSession) -> Transaction:
-    return get_transaction_or_404(db, transaction_id)
+def get_transaction(
+    transaction_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Transaction:
+    return get_transaction_or_404(db, transaction_id, current_user.id)
 
 
 @router.post("", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)
 def create_transaction(
     transaction_in: TransactionCreate,
     db: DbSession,
+    current_user: CurrentUser,
 ) -> Transaction:
-    get_category_or_404(db, transaction_in.category_id)
+    get_category_or_404(db, transaction_in.category_id, current_user.id)
 
     transaction = Transaction(
+        user_id=current_user.id,
         type=transaction_in.type.value,
         description=transaction_in.description,
         amount=transaction_in.amount,
@@ -185,7 +207,7 @@ def create_transaction(
             detail="Category not found.",
         ) from exc
 
-    return get_transaction_for_response(db, transaction.id)
+    return get_transaction_for_response(db, transaction.id, current_user.id)
 
 
 @router.patch(
@@ -197,12 +219,13 @@ def update_transaction(
     transaction_id: int,
     transaction_in: TransactionUpdate,
     db: DbSession,
+    current_user: CurrentUser,
 ) -> Transaction:
-    transaction = get_transaction_or_404(db, transaction_id)
+    transaction = get_transaction_or_404(db, transaction_id, current_user.id)
     update_data = transaction_in.model_dump(exclude_unset=True)
 
     if "category_id" in update_data:
-        get_category_or_404(db, update_data["category_id"])
+        get_category_or_404(db, update_data["category_id"], current_user.id)
 
     final_is_recurring = update_data.get("is_recurring", transaction.is_recurring)
     final_recurring_frequency = update_data.get(
@@ -228,12 +251,16 @@ def update_transaction(
             detail="Category not found.",
         ) from exc
 
-    return get_transaction_for_response(db, transaction.id)
+    return get_transaction_for_response(db, transaction.id, current_user.id)
 
 
 @router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_transaction(transaction_id: int, db: DbSession) -> Response:
-    transaction = get_transaction_or_404(db, transaction_id)
+def delete_transaction(
+    transaction_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> Response:
+    transaction = get_transaction_or_404(db, transaction_id, current_user.id)
     db.delete(transaction)
     db.commit()
 
